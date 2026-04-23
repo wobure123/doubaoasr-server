@@ -242,6 +242,13 @@ def main():
         log.error("Make sure doubaoime-asr is installed correctly.")
         sys.exit(1)
 
+    # File logging (always on, survives window close / no-console mode)
+    log_path = Path(CREDENTIAL_PATH).parent / "server.log"
+    Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+    fh = logging.FileHandler(log_path, encoding="utf-8")
+    fh.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s %(message)s", datefmt="%H:%M:%S"))
+    logging.getLogger().addHandler(fh)
+    log.info("Log file: %s", log_path)
     server = HTTPServer((HOST, PORT), ASRHandler)
     log.info("=" * 56)
     log.info(" doubaoime-asr-server  (OpenAI-compatible ASR)")
