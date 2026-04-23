@@ -82,56 +82,32 @@ jobs:
         shell: pwsh
         run: Get-ChildItem dist\
 
+# ------------------------------------------------------------------ #
+      # 8. 上传为 Actions Artifact（任何触发方式都能下载）
       # ------------------------------------------------------------------ #
-      # 8. Determine release tag / version
-      # ------------------------------------------------------------------ #
-      - name: Get version
-        id: version
-        shell: pwsh
-        run: |
-          if ($env:GITHUB_REF -match "refs/tags/(.+)") {
-            echo "tag=$($Matches[1])" >> $env:GITHUB_OUTPUT
-          } else {
-            $short = $env:GITHUB_SHA.Substring(0, 7)
-            echo "tag=dev-$short" >> $env:GITHUB_OUTPUT
-          }
+      - name: Upload EXE as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: doubaoime-asr-server-windows
+          path: dist/doubaoime-asr-server.exe
+          retention-days: 30
 
       # ------------------------------------------------------------------ #
-      # 9. Create GitHub Release and upload EXE
+      # 9. 仅在 Tag 触发时才发布 Release
       # ------------------------------------------------------------------ #
-      - name: Create Release and Upload EXE
+      - name: Create Release (tag only)
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: "doubaoime-asr-server ${{ steps.version.outputs.tag }}"
-          draft: false
-          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+          name: "doubaoime-asr-server ${{ github.ref_name }}"
           body: |
-            ## 豆包输入法 ASR 本地服务 ${{ steps.version.outputs.tag }}
+            ## 豆包输入法 ASR 本地服务 ${{ github.ref_name }}
 
             ### 使用方法
-
-            1. 下载 `doubaoime-asr-server.exe`
-            2. 双击运行（首次运行会自动注册设备，凭据保存在 `%USERPROFILE%\.config\doubaoime-asr\credentials.json`）
-            3. 在 **LazyTyper** 中配置：
-               - 模型名称：`doubaoime-asr`（随意填写）
+            1. 下载 `doubaoime-asr-server.exe`，双击运行
+            2. 在 LazyTyper 中配置：
                - API Endpoint：`http://127.0.0.1:5050/v1/audio/transcriptions`
-               - API 密钥：`local`（随意填写非空内容）
-
-            ### 环境变量（可选）
-
-            | 变量 | 默认值 | 说明 |
-            |------|--------|------|
-            | `ASR_HOST` | `127.0.0.1` | 监听地址 |
-            | `ASR_PORT` | `5050` | 监听端口 |
-            | `ASR_CREDENTIAL_PATH` | `~/.config/doubaoime-asr/credentials.json` | 凭据路径 |
-
-            ### 注意
-
-            - 本服务基于 [doubaoime-asr](https://github.com/starccy/doubaoime-asr)，为非官方实现
-            - 需要网络连接（调用豆包输入法 ASR 服务）
-            - 支持 Windows 10/11 x64
-          files: |
-            dist/doubaoime-asr-server.exe
+               - API 密钥：随意填写非空内容（如 `local`）
+          files: dist/doubaoime-asr-server.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
