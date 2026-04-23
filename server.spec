@@ -1,40 +1,37 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
 
 block_cipher = None
+
+# 完整收集这些包的所有文件（含原生扩展）
+datas_extra, binaries_extra, hiddenimports_extra = [], [], []
+for pkg in ['doubaoime_asr', 'cffi', 'opuslib', 'cryptography', 'aiohttp']:
+    d, b, h = collect_all(pkg)
+    datas_extra += d
+    binaries_extra += b
+    hiddenimports_extra += h
 
 a = Analysis(
     ['src/server.py'],
     pathex=['.'],
-    binaries=[],
-    datas=[],
-    hiddenimports=[
-	'cryptography',
-	'cryptography.hazmat.primitives',
-	'cryptography.hazmat.backends',
-	'cryptography.hazmat.backends.openssl',
-	'cryptography.hazmat.bindings._rust',
-        # cffi / opuslib
+    binaries=binaries_extra,
+    datas=datas_extra,
+    hiddenimports=hiddenimports_extra + [
         '_cffi_backend',
         'cffi',
-        # doubaoime_asr
+        'cryptography',
+        'cryptography.hazmat.primitives',
+        'cryptography.hazmat.backends',
+        'cryptography.hazmat.backends.openssl',
+        'cryptography.hazmat.bindings._rust',
         'doubaoime_asr',
-        'doubaoime_asr.asr',
-        'doubaoime_asr.config',
-        'doubaoime_asr.credentials',
-        'doubaoime_asr.audio',
-        # async / network
         'asyncio',
         'aiohttp',
-        'aiohttp.web',
         'websockets',
-        # protobuf
         'google.protobuf',
         'google.protobuf.descriptor',
         'google.protobuf.descriptor_pool',
         'google.protobuf.message',
-        'google.protobuf.reflection',
-        'google.protobuf.symbol_database',
-        # stdlib
         'ctypes',
         'ctypes.util',
     ],
@@ -46,7 +43,6 @@ a = Analysis(
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
-    collect_all=['doubaoime_asr', 'cffi', 'opuslib','cryptography'],
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
