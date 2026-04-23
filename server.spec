@@ -5,7 +5,7 @@ block_cipher = None
 
 # 完整收集这些包的所有文件（含原生扩展）
 datas_extra, binaries_extra, hiddenimports_extra = [], [], []
-for pkg in ['doubaoime_asr', 'cffi', 'miniaudio', 'aiohttp']:
+for pkg in ['doubaoime_asr', 'cffi','opuslib', 'aiohttp']:
     d, b, h = collect_all(pkg)
     datas_extra += d
     binaries_extra += b
