@@ -8,6 +8,11 @@ a = Analysis(
     binaries=[],
     datas=[],
     hiddenimports=[
+	'cryptography',
+	'cryptography.hazmat.primitives',
+	'cryptography.hazmat.backends',
+	'cryptography.hazmat.backends.openssl',
+	'cryptography.hazmat.bindings._rust',
         # cffi / opuslib
         '_cffi_backend',
         'cffi',
@@ -41,7 +46,7 @@ a = Analysis(
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
-    collect_all=['doubaoime_asr', 'cffi', 'opuslib'],
+    collect_all=['doubaoime_asr', 'cffi', 'opuslib','cryptography'],
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
