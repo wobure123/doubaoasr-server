@@ -13,13 +13,13 @@
 | 字段 | 值 |
 |------|----|
 | 模型名称 | `doubaoime-asr`（任意字符串） |
-| API Endpoint | `http://127.0.0.1:5050/v1/audio/transcriptions` |
+| API Endpoint | `http://127.0.0.1:5050` |
 | API 密钥 | `local`（任意非空字符串） |
 
 ## 工作原理
 
 ```
-麦克风 → LazyTyper → POST /v1/audio/transcriptions
+麦克风 → LazyTyper → GET /v1/models / POST /v1/audio/transcriptions
                               ↓
                    doubaoime-asr-server (本地 :5050)
                               ↓
@@ -37,6 +37,8 @@
 | `ASR_HOST` | `127.0.0.1` | 监听地址 |
 | `ASR_PORT` | `5050` | 监听端口 |
 | `ASR_CREDENTIAL_PATH` | `%USERPROFILE%\.config\doubaoime-asr\credentials.json` | 凭据缓存路径 |
+
+> 如果接入工具会先请求 `/v1/models` 做密钥校验，请把 API Endpoint 填成 `http://127.0.0.1:5050`。服务同时支持 `/v1/models` 和 `/v1/audio/transcriptions`。
 
 ## 自行构建
 

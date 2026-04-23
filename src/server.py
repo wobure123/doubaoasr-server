@@ -146,6 +146,20 @@ class ASRHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in ("/", "/health"):
             self._send_json(200, {"status": "ok", "asr_available": ASR_AVAILABLE})
+        elif self.path.rstrip("/") == "/v1/models":
+            self._send_json(
+                200,
+                {
+                    "object": "list",
+                    "data": [
+                        {
+                            "id": "doubaoime-asr",
+                            "object": "model",
+                            "owned_by": "local",
+                        }
+                    ],
+                },
+            )
         else:
             self._send_json(404, {"error": "not found"})
 
