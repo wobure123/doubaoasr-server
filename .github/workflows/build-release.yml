@@ -59,13 +59,20 @@ jobs:
       # ------------------------------------------------------------------ #
       # 5. Patch server.spec to include opus DLLs as binaries
       # ------------------------------------------------------------------ #
-      - name: Patch spec – add Opus DLLs
+      - name: Patch spec - add Opus DLLs
         shell: pwsh
         run: |
-          # Append the DLL to the binaries list in the spec so they land next to the exe
+          # 验证 dll 存在
+          if (-not (Test-Path "src\opus.dll")) {
+            Write-Error "opus.dll not found in src\"
+            exit 1
+          }
+          Write-Host "opus.dll size: $((Get-Item 'src\opus.dll').Length) bytes"
           $spec = Get-Content server.spec -Raw
-          $spec = $spec -replace "binaries=\[\],", "binaries=[('src/opus.dll', '.'), ('src/libopus-0.dll', '.')],"
+          $spec = $spec -replace "binaries=binaries_extra,", "binaries=binaries_extra + [('src/opus.dll', '.'), ('src/libopus-0.dll', '.')],"
           Set-Content server.spec $spec
+          # 确认替换成功
+          Select-String "opus.dll" server.spec
           
       - name: Show installed packages
         shell: pwsh
