@@ -73,13 +73,16 @@ def _run_transcribe(audio_bytes: bytes, suffix: str) -> str:
 
     _ensure_credential_dir()
     config = ASRConfig(credential_path=CREDENTIAL_PATH)
+    log.info("[ASR] credential_path=%s", CREDENTIAL_PATH)
 
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
         f.write(audio_bytes)
         tmp_path = f.name
 
+    log.info("[ASR] calling transcribe: file=%s size=%d bytes", tmp_path, len(audio_bytes))
     try:
         result = asyncio.run(transcribe(tmp_path, config=config))
+        log.info("[ASR] raw result: %r", result)
     finally:
         try:
             os.unlink(tmp_path)
