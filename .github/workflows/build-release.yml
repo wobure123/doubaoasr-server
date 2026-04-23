@@ -66,6 +66,10 @@ jobs:
           $spec = Get-Content server.spec -Raw
           $spec = $spec -replace "binaries=\[\],", "binaries=[('src/opus.dll', '.'), ('src/libopus-0.dll', '.')],"
           Set-Content server.spec $spec
+          
+      - name: Show installed packages
+        shell: pwsh
+        run: pip list
 
       # ------------------------------------------------------------------ #
       # 6. Build with PyInstaller
