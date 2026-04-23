@@ -1,11 +1,4 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""
-PyInstaller spec for doubaoime-asr-server
-Produces a single-file Windows executable.
-"""
-
-import sys
-from pathlib import Path
 
 block_cipher = None
 
@@ -15,7 +8,10 @@ a = Analysis(
     binaries=[],
     datas=[],
     hiddenimports=[
-        # doubaoime_asr internals
+        # cffi / opuslib
+        '_cffi_backend',
+        'cffi',
+        # doubaoime_asr
         'doubaoime_asr',
         'doubaoime_asr.asr',
         'doubaoime_asr.config',
@@ -24,6 +20,7 @@ a = Analysis(
         # async / network
         'asyncio',
         'aiohttp',
+        'aiohttp.web',
         'websockets',
         # protobuf
         'google.protobuf',
@@ -32,18 +29,19 @@ a = Analysis(
         'google.protobuf.message',
         'google.protobuf.reflection',
         'google.protobuf.symbol_database',
-        # opuslib / soundfile fallback
+        # stdlib
         'ctypes',
         'ctypes.util',
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['tkinter', 'matplotlib', 'numpy', 'PIL'],
+    excludes=['tkinter', 'matplotlib', 'PIL'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
+    collect_all=['doubaoime_asr', 'cffi', 'opuslib'],
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
@@ -62,7 +60,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,          # keep console so users see the log
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
