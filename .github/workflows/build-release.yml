@@ -1,0 +1,141 @@
+name: Build & Release Windows EXE
+
+on:
+  push:
+    tags:
+      - 'v*'           # trigger on version tags like v1.0.0
+  workflow_dispatch:   # allow manual trigger from GitHub UI
+
+permissions:
+  contents: write      # needed to create releases and upload assets
+
+jobs:
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+
+    steps:
+      # ------------------------------------------------------------------ #
+      # 1. Checkout
+      # ------------------------------------------------------------------ #
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------ #
+      # 2. Set up Python
+      # ------------------------------------------------------------------ #
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # ------------------------------------------------------------------ #
+      # 3. Install Opus DLL (Windows)
+      #    doubaoime-asr uses opuslib which wraps the native libopus.
+      #    We download the official pre-built DLL and place it where
+      #    opuslib / ctypes.util.find_library can find it (next to exe).
+      # ------------------------------------------------------------------ #
+      - name: Download Opus DLL
+        shell: pwsh
+        run: |
+          $url = "https://github.com/xiph/opus/releases/download/v1.5.2/opus-1.5.2-win64.zip"
+          Invoke-WebRequest -Uri $url -OutFile opus.zip
+          Expand-Archive -Path opus.zip -DestinationPath opus_tmp -Force
+          # The zip contains opus.dll (or libopus-0.dll); copy to src/ so PyInstaller picks it up
+          $dll = Get-ChildItem -Path opus_tmp -Filter "*.dll" -Recurse | Select-Object -First 1
+          Write-Host "Found DLL: $($dll.FullName)"
+          Copy-Item $dll.FullName -Destination src\opus.dll
+          # Also put a copy named libopus-0.dll (what opuslib looks for on Windows)
+          Copy-Item $dll.FullName -Destination src\libopus-0.dll
+
+      # ------------------------------------------------------------------ #
+      # 4. Install Python dependencies
+      # ------------------------------------------------------------------ #
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          # Install doubaoime-asr directly from GitHub
+          pip install "git+https://github.com/starccy/doubaoime-asr.git"
+          # Install server dependencies
+          pip install pyinstaller aiohttp
+
+      # ------------------------------------------------------------------ #
+      # 5. Patch server.spec to include opus DLLs as binaries
+      # ------------------------------------------------------------------ #
+      - name: Patch spec – add Opus DLLs
+        shell: pwsh
+        run: |
+          # Append the DLL to the binaries list in the spec so they land next to the exe
+          $spec = Get-Content server.spec -Raw
+          $spec = $spec -replace "binaries=\[\],", "binaries=[('src/opus.dll', '.'), ('src/libopus-0.dll', '.')],"
+          Set-Content server.spec $spec
+
+      # ------------------------------------------------------------------ #
+      # 6. Build with PyInstaller
+      # ------------------------------------------------------------------ #
+      - name: Build EXE with PyInstaller
+        shell: pwsh
+        run: |
+          pyinstaller server.spec --clean --noconfirm
+
+      # ------------------------------------------------------------------ #
+      # 7. Verify output
+      # ------------------------------------------------------------------ #
+      - name: List dist folder
+        shell: pwsh
+        run: Get-ChildItem dist\
+
+      # ------------------------------------------------------------------ #
+      # 8. Determine release tag / version
+      # ------------------------------------------------------------------ #
+      - name: Get version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -match "refs/tags/(.+)") {
+            echo "tag=$($Matches[1])" >> $env:GITHUB_OUTPUT
+          } else {
+            $short = $env:GITHUB_SHA.Substring(0, 7)
+            echo "tag=dev-$short" >> $env:GITHUB_OUTPUT
+          }
+
+      # ------------------------------------------------------------------ #
+      # 9. Create GitHub Release and upload EXE
+      # ------------------------------------------------------------------ #
+      - name: Create Release and Upload EXE
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "doubaoime-asr-server ${{ steps.version.outputs.tag }}"
+          draft: false
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+          body: |
+            ## 豆包输入法 ASR 本地服务 ${{ steps.version.outputs.tag }}
+
+            ### 使用方法
+
+            1. 下载 `doubaoime-asr-server.exe`
+            2. 双击运行（首次运行会自动注册设备，凭据保存在 `%USERPROFILE%\.config\doubaoime-asr\credentials.json`）
+            3. 在 **LazyTyper** 中配置：
+               - 模型名称：`doubaoime-asr`（随意填写）
+               - API Endpoint：`http://127.0.0.1:5050/v1/audio/transcriptions`
+               - API 密钥：`local`（随意填写非空内容）
+
+            ### 环境变量（可选）
+
+            | 变量 | 默认值 | 说明 |
+            |------|--------|------|
+            | `ASR_HOST` | `127.0.0.1` | 监听地址 |
+            | `ASR_PORT` | `5050` | 监听端口 |
+            | `ASR_CREDENTIAL_PATH` | `~/.config/doubaoime-asr/credentials.json` | 凭据路径 |
+
+            ### 注意
+
+            - 本服务基于 [doubaoime-asr](https://github.com/starccy/doubaoime-asr)，为非官方实现
+            - 需要网络连接（调用豆包输入法 ASR 服务）
+            - 支持 Windows 10/11 x64
+          files: |
+            dist/doubaoime-asr-server.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
