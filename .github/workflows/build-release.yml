@@ -86,32 +86,35 @@ jobs:
         shell: pwsh
         run: Get-ChildItem dist\
 
-# ------------------------------------------------------------------ #
-      # 8. 上传为 Actions Artifact（任何触发方式都能下载）
       # ------------------------------------------------------------------ #
-      - name: Upload EXE as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: doubaoime-asr-server-windows
-          path: dist/doubaoime-asr-server.exe
-          retention-days: 30
+      # 8. 确定 tag 名
+      # ------------------------------------------------------------------ #
+      - name: Get version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -match "refs/tags/(.+)") {
+            echo "tag=$($Matches[1])" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "tag=latest" >> $env:GITHUB_OUTPUT
+          }
 
       # ------------------------------------------------------------------ #
-      # 9. 仅在 Tag 触发时才发布 Release
+      # 9. 发布到 Release（tag 触发用版本号，手动触发用 latest）
       # ------------------------------------------------------------------ #
-      - name: Create Release (tag only)
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Create Release and Upload EXE
         uses: softprops/action-gh-release@v2
         with:
-          name: "doubaoime-asr-server ${{ github.ref_name }}"
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "doubaoime-asr-server ${{ steps.version.outputs.tag }}"
+          draft: false
+          prerelease: ${{ steps.version.outputs.tag == 'latest' }}
           body: |
-            ## 豆包输入法 ASR 本地服务 ${{ github.ref_name }}
+            ## 豆包输入法 ASR 本地服务
 
-            ### 使用方法
-            1. 下载 `doubaoime-asr-server.exe`，双击运行
-            2. 在 LazyTyper 中配置：
-               - API Endpoint：`http://127.0.0.1:5050/v1/audio/transcriptions`
-               - API 密钥：随意填写非空内容（如 `local`）
+            ### LazyTyper 配置
+            - API Endpoint：`http://127.0.0.1:5050/v1/audio/transcriptions`
+            - API 密钥：随意填写非空内容（如 `local`）
           files: dist/doubaoime-asr-server.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
