@@ -54,7 +54,7 @@ jobs:
           # Install doubaoime-asr directly from GitHub
           pip install "git+https://github.com/starccy/doubaoime-asr.git"
           # Install server dependencies
-          pip install pyinstaller aiohttp
+          pip install pyinstaller aiohttp cryptography cffi
 
       # ------------------------------------------------------------------ #
       # 5. Patch server.spec to include opus DLLs as binaries
