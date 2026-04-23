@@ -4,6 +4,22 @@ OpenAI-compatible /v1/audio/transcriptions endpoint
 backed by 豆包输入法 ASR (doubaoime-asr)
 """
 
+import os
+import sys
+
+# 让 opuslib 能找到打包在一起的 opus.dll
+# PyInstaller 打包后 sys._MEIPASS 是解压临时目录
+if hasattr(sys, '_MEIPASS'):
+    _bundle_dir = sys._MEIPASS
+else:
+    _bundle_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Windows: 把 bundle 目录加到 DLL 搜索路径
+if sys.platform == 'win32':
+    os.add_dll_directory(_bundle_dir)
+    # 同时设置环境变量，opuslib 会读这个
+    os.environ['PATH'] = _bundle_dir + os.pathsep + os.environ.get('PATH', '')
+    
 import asyncio
 import json
 import logging
