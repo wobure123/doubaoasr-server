@@ -30,22 +30,18 @@ jobs:
           python-version: '3.11'
 
       # ------------------------------------------------------------------ #
-      # 3. Install Opus DLL (Windows)
-      #    doubaoime-asr uses opuslib which wraps the native libopus.
-      #    We download the official pre-built DLL and place it where
-      #    opuslib / ctypes.util.find_library can find it (next to exe).
+      # 3. Get Opus DLL via vcpkg (pre-installed on windows-latest)
       # ------------------------------------------------------------------ #
-      - name: Download Opus DLL
+      - name: Install Opus via vcpkg
         shell: pwsh
         run: |
-          $url = "https://github.com/xiph/opus/releases/download/v1.5.2/opus-1.5.2-win64.zip"
-          Invoke-WebRequest -Uri $url -OutFile opus.zip
-          Expand-Archive -Path opus.zip -DestinationPath opus_tmp -Force
-          # The zip contains opus.dll (or libopus-0.dll); copy to src/ so PyInstaller picks it up
-          $dll = Get-ChildItem -Path opus_tmp -Filter "*.dll" -Recurse | Select-Object -First 1
-          Write-Host "Found DLL: $($dll.FullName)"
+          vcpkg install opus:x64-windows
+          $dll = Get-ChildItem "C:\vcpkg\installed\x64-windows\bin" -Filter "opus.dll" | Select-Object -First 1
+          if (-not $dll) {
+            $dll = Get-ChildItem "C:\vcpkg" -Filter "opus.dll" -Recurse | Select-Object -First 1
+          }
+          Write-Host "Found opus.dll: $($dll.FullName)"
           Copy-Item $dll.FullName -Destination src\opus.dll
-          # Also put a copy named libopus-0.dll (what opuslib looks for on Windows)
           Copy-Item $dll.FullName -Destination src\libopus-0.dll
 
       # ------------------------------------------------------------------ #
